@@ -1,6 +1,5 @@
 #include<Windows.h>
 #include <glut.h>
-#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -53,9 +52,11 @@ struct Speed {
 //Blocks
 
 struct Blocks {
-	vector<vector<vector<float>>> Rows;
+	vector<vector<float>> Rows;
+	vector<vector<int>> RemovedBlocks;
 	float startRowPosition;
 	float rawsPaddingDistance;
+	float columnPaddingDistance;
 	float blockHeight;
 
 };
@@ -76,8 +77,8 @@ bool lost = false;
 string direction;
 float maxBallSpeedX = 0.076;
 float maxBallSpeedY = 0.38;
-float minSpeedX = 0.03;
-float minSpeedY = 0.15;
+float minSpeedX = 0.003;
+float minSpeedY = 0.015;
 
 void initGame();
 void display();
@@ -90,7 +91,9 @@ void timer(int);
 void detectCollisionWithBlocks();
 void detectCollisionWithJumpingPad();
 void detectCollisionWithScreen();
-void removeElementFromVector(size_t row, size_t block);
+void removeBlockFromVector(size_t row, size_t blockNum);
+vector<vector<int>> initRemovedBlocksVector(int numOfRows);
+bool isBlockRemoved(vector<int> RemovedBlocks, int block);
 void keyboard(int, int, int);
 int main(int argc, char** argv)
 {
@@ -119,57 +122,60 @@ int main(int argc, char** argv)
 void initGame() {
 	//Ball
 	ball.x = 0;
-	ball.y = -4;
+	ball.y = -4.0;
 	ball.segments = 50;
 	ball.raduis = 0.5;
 
 	//Pad
-	pad.x_Right = 3;
-	pad.x_Left = -3;
+	pad.x_Right = 3.0;
+	pad.x_Left = -3.0;
 	pad.y_top = -7.5;
-	pad.y_bot = -8;
+	pad.y_bot = -8.0;
 
 	//Speed
 	speed.x = minSpeedX;
 	speed.y = minSpeedY;
 
 	//Blocks
-	blocks.startRowPosition = -6;
-	blocks.rawsPaddingDistance = 3;
-	blocks.blockHeight = 1;
+	blocks.startRowPosition = -6.0;
+	blocks.rawsPaddingDistance = 3.0;
+	blocks.columnPaddingDistance = 0.2;
+	blocks.blockHeight = 0.5;
+	
+
 	blocks.Rows = {
-{	{ -9, -5, -1, 3 ,7,11 } ,
-	{ -12, -8,-4,0,4,8 }
-
+{	
+	{ -11, 2, 10 } , //{first block position , each block width , number of blocks}
+	
 },
 
 {
-	{ -9.5, -5 - 0.5, -1 - 0.5, 2.5, 6.5,10.5 },
-	{ -11.5, -7.5, -3.5, 0.5, 4.5, 8.5 }
-
+	{ -11, 2 , 10 },
+	
 },
 
-
 {
-
-	{ -9, -5, -1, 3, 7, 11 },
-	{ -12, -8, -4, 0, 4, 8 }
-
+	{ -11, 2, 10 }
 },
 {
-	{ -9.5, -5 - 0.5, -1 - 0.5, 2.5, 6.5,10.5 },
-
-	{ -11.5, -7.5, -3.5, 0.5, 4.5, 8.5 }
-
+	{ -11, 2 , 10 },
 }
 
 	};
-
+	blocks.RemovedBlocks = initRemovedBlocksVector(blocks.Rows.size());
+	
 
 	//Game Settings
 	gravity = true;
 	lost = false;
 	direction = "";
+
+}
+vector<vector<int>> initRemovedBlocksVector(int numOfRows) {
+	//create vector of vectors and intilize each with one element equal to -1.
+	vector<vector<int>> initilizedVector(numOfRows , vector<int>(1, -1));
+	return initilizedVector;
+		
 
 }
 void reshape(int w, int h) {
@@ -246,29 +252,35 @@ void drawJumpingPad() {
 
 }
 void drawRows() {
-	int bot = blocks.startRowPosition;
+	float bot = blocks.startRowPosition;
 
 	for (size_t row = 0; row < blocks.Rows.size(); row++) {
 		bot = bot + blocks.rawsPaddingDistance;
-		for (size_t block = 0; block < blocks.Rows[row][0].size(); block++) {
+		float blockStartPosition = blocks.Rows[row][0];
+		float blockWidth = blocks.Rows[row][1];
+		for (size_t block = 0; block < blocks.Rows[row][2]; block++) {
+			
+				if (!isBlockRemoved(blocks.RemovedBlocks[row],block)) {
+
+					/* RemovedBlocks doesn't contains the block*/
 
 
+					glBegin(GL_POLYGON);
 
-			if (blocks.Rows[row][0][block] != 100) {
-				glBegin(GL_POLYGON);
+					glVertex2f(blockStartPosition, bot);
+					glVertex2f(blockStartPosition + blockWidth, bot);
 
+					glVertex2f(blockStartPosition + blockWidth, bot + blocks.blockHeight);
+					glVertex2f(blockStartPosition, bot + blocks.blockHeight);
 
-				glVertex2f(blocks.Rows[row][1][block] , bot);
-				glVertex2f(blocks.Rows[row][0][block] , bot);
+					glEnd();
+				}
+				
+				blockStartPosition = blockStartPosition + blockWidth + blocks.columnPaddingDistance; //move to the begining of the next block
 
-				glVertex2f(blocks.Rows[row][0][block] , bot + blocks.blockHeight);
-				glVertex2f(blocks.Rows[row][1][block] , bot + blocks.blockHeight);
-
-
-				glEnd();
-
-			}
+			
 		}
+		
 	}
 
 }
@@ -383,41 +395,51 @@ void detectCollisionWithJumpingPad() {
 
 }
 void detectCollisionWithBlocks() {
-	int bot = blocks.startRowPosition;
+	float bot = blocks.startRowPosition;
 
 	for (size_t row = 0; row < blocks.Rows.size(); row++) {
 		bot = bot + blocks.rawsPaddingDistance;
-		for (size_t block = 0; block < blocks.Rows[row][0].size(); block++) {
+		float blockStartPosition = blocks.Rows[row][0];
+		float blockWidth = blocks.Rows[row][1];
+		for (size_t block = 0; block < blocks.Rows[row][2]; block++) {
 
 
-			if (ball.x + ball.raduis >= blocks.Rows[row][1][block]  && ball.x - ball.raduis <= blocks.Rows[row][0][block] ) {
+			if (!isBlockRemoved(blocks.RemovedBlocks[row], block) &&ball.x + ball.raduis >= blockStartPosition  && ball.x - ball.raduis <= blockStartPosition+blockWidth ) {
 				// the ball hits the block form the bottom.
 				if (ball.y + ball.raduis >= bot && ball.y < bot  && !gravity) {
 					gravity = true;
-					removeElementFromVector(row, block);
+					removeBlockFromVector(row, block);
 
 				}
 				// the ball hits the block from the top.
 				else if (ball.y - ball.raduis <= bot + blocks.blockHeight && ball.y > (bot + blocks.blockHeight) && gravity) {
 					gravity = false;
-					removeElementFromVector(row, block);
+					removeBlockFromVector(row, block);
 
 				}
 
+
+
 			}
+			blockStartPosition = blockStartPosition + blockWidth + blocks.columnPaddingDistance; //move to the begining of the next block
 
 		}
 	}
 
 }
-void removeElementFromVector(size_t row, size_t block) {
-	//remove the specified element from the vector.
+void removeBlockFromVector(size_t row, size_t blockNum) {
+	//Add the specified block to RemovedBlocks vector.
+		blocks.RemovedBlocks[row].push_back(blockNum);
 
-	blocks.Rows[row][0].erase(blocks.Rows[row][0].begin() +block );
-	blocks.Rows[row][1].erase(blocks.Rows[row][1].begin() + block );
-
-	//cout << "Row : " << row << " has now " << blocks.Rows[row][0].size() << " Blocks." << endl;
-	
+}
+bool isBlockRemoved(vector<int> RemovedBlocks, int block) {
+	//Search specific row from RemovedBlocks vector for block , return true if found. 
+	if (find(RemovedBlocks.begin(), RemovedBlocks.end(), block) != RemovedBlocks.end()) {
+		/* RemovedBlocks contains the block*/
+		return true;
+	}
+	  /* RemovedBlocks doesn't contains the block*/
+	   return false;
 
 
 }
