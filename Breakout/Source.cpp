@@ -59,9 +59,6 @@ struct Blocks {
 	float blockHeight;
 
 };
-//int startPoint = -6, height = 3;
-float extra = 0.5;
-//float blockHeight = 1;
 
 
 
@@ -261,17 +258,12 @@ void drawRows() {
 				glBegin(GL_POLYGON);
 
 
-				glVertex2f(blocks.Rows[row][1][block] + extra, bot);
-				glVertex2f(blocks.Rows[row][0][block] - extra, bot);
+				glVertex2f(blocks.Rows[row][1][block] , bot);
+				glVertex2f(blocks.Rows[row][0][block] , bot);
 
-				glVertex2f(blocks.Rows[row][0][block], bot + extra);
+				glVertex2f(blocks.Rows[row][0][block] , bot + blocks.blockHeight);
+				glVertex2f(blocks.Rows[row][1][block] , bot + blocks.blockHeight);
 
-				glVertex2f(blocks.Rows[row][0][block] - extra, bot + blocks.blockHeight);
-				glVertex2f(blocks.Rows[row][1][block] + extra, bot + blocks.blockHeight);
-
-				glVertex2f(blocks.Rows[row][1][block], bot + extra);
-
-				glVertex2f(blocks.Rows[row][1][block] + extra, bot);
 
 				glEnd();
 
@@ -398,15 +390,15 @@ void detectCollisionWithBlocks() {
 		for (size_t block = 0; block < blocks.Rows[row][0].size(); block++) {
 
 
-			// the ball hits the block form the bottom.
-			if (ball.x - ball.raduis >= blocks.Rows[row][1][block] - extra && ball.x + ball.raduis <= blocks.Rows[row][0][block] + extra) {
-				if (ball.y + ball.raduis >= bot && ball.y < bot + 0.2 && !gravity) {
+			if (ball.x + ball.raduis >= blocks.Rows[row][1][block]  && ball.x - ball.raduis <= blocks.Rows[row][0][block] ) {
+				// the ball hits the block form the bottom.
+				if (ball.y + ball.raduis >= bot && ball.y < bot  && !gravity) {
 					gravity = true;
 					removeElementFromVector(row, block);
 
 				}
 				// the ball hits the block from the top.
-				else if (ball.y - ball.raduis <= bot + blocks.blockHeight && ball.y > (bot + blocks.blockHeight) - 0.2 && gravity) {
+				else if (ball.y - ball.raduis <= bot + blocks.blockHeight && ball.y > (bot + blocks.blockHeight) && gravity) {
 					gravity = false;
 					removeElementFromVector(row, block);
 
