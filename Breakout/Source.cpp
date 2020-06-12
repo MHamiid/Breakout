@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <vector>
 #define PI  3.14159265358979323846264338327950288419716939937510582097494459230781640628620899863
 using namespace std;
 
@@ -16,11 +17,11 @@ LeftArrow : Move Pad To The Left*/
 
 //Ball
 struct Ball {
-	int segments ;
-	float x , y ;
+	int segments;
+	float x, y;
 	float velocityX;
 	float velocityY;
-	float raduis ;
+	float raduis;
 	float ballMaxX, ballMinX, ballMaxY, ballMinY;
 
 };
@@ -50,14 +51,13 @@ struct Speed {
 
 
 //Blocks
-int numOfRows = 4, numOfBlocks = 6;
 int startPoint = -6, height = 3;
 float extra = 0.5;
 float blockHeight = 1;
-float Rows[4][2][6] = { 
-{	{ -9 ,-5, -1, 3 ,7,11 } ,
-	{ -12,-8,-4,0,4,8 }
-	
+vector<vector<vector<float>>> Rows = {
+{	{ -9, -5, -1, 3 ,7,11 } ,
+	{ -12, -8,-4,0,4,8 }
+
 },
 
 {
@@ -68,16 +68,16 @@ float Rows[4][2][6] = {
 
 
 {
-	
+
 	{ -9, -5, -1, 3, 7, 11 },
 	{ -12, -8, -4, 0, 4, 8 }
-	
+
 },
 {
 	{ -9.5, -5 - 0.5, -1 - 0.5, 2.5, 6.5,10.5 },
 
 	{ -11.5, -7.5, -3.5, 0.5, 4.5, 8.5 }
-	
+
 }
 
 };
@@ -110,7 +110,7 @@ void timer(int);
 void detectCollisionWithBlocks();
 void detectCollisionWithJumpingPad();
 void detectCollisionWithScreen();
-void removeElementFromArray(int row ,int block);
+void removeElementFromArray(int row, int block);
 void keyboard(int, int, int);
 int main(int argc, char** argv)
 {
@@ -191,7 +191,7 @@ void reshape(int w, int h) {
 		screen.screenBot = -10 / screen.ratio;
 		screen.screenTop = 10 / screen.ratio;
 	}
-	
+
 	gluOrtho2D(screen.screenLeft, screen.screenRight, screen.screenBot, screen.screenTop);
 
 	glMatrixMode(GL_MODELVIEW);
@@ -207,7 +207,7 @@ void setBallScreenBoundary() {
 }
 
 void drawBall() {
-    glBegin(GL_TRIANGLE_FAN);
+	glBegin(GL_TRIANGLE_FAN);
 	glVertex2f(ball.x, ball.y);
 	float angle;
 
@@ -222,7 +222,7 @@ void drawBall() {
 void drawJumpingPad() {
 
 	glBegin(GL_QUADS);
-	
+
 	glVertex2f(pad.x_Right, pad.y_top);
 
 	glVertex2f(pad.x_Left, pad.y_top);
@@ -234,10 +234,12 @@ void drawJumpingPad() {
 
 }
 void drawRows() {
-	int bot =startPoint;
-	for (int row = 0; row< numOfRows; row++) {
+	int bot = startPoint;
+
+	for (size_t row = 0; row < Rows.size(); row++) {
 		bot = bot + height;
-		for (int block = 0; block < numOfBlocks; block++) {
+		for (size_t block = 0; block < Rows[row][0].size(); block++) {
+
 
 
 			if (Rows[row][0][block] != 100) {
@@ -261,7 +263,7 @@ void drawRows() {
 			}
 		}
 	}
-	
+
 }
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -282,7 +284,7 @@ void display() {
 	glColor3f(0.5, 0.6, 0.4);
 	drawJumpingPad();
 
-	
+
 
 	glutSwapBuffers();
 }
@@ -308,7 +310,7 @@ void timer(int v) {
 		ball.x = ball.x + speed.x;
 	}
 	else if (direction == "left") {
-	
+
 		ball.x = ball.x - speed.x;
 
 	}
@@ -342,25 +344,25 @@ void detectCollisionWithScreen() {
 
 }
 void detectCollisionWithJumpingPad() {
-	
+
 
 	// if the ball passed the top of the jumping pad.
 	if (ball.y - ball.raduis <= pad.y_top - 0.3) {
-	
+
 		lost = true;
-		
+
 	}
-	else if (ball.y - ball.raduis <= pad.y_top && ball.x+ball.raduis >= pad.x_Left && ball.x <= pad.x_Right - 4.0) {
+	else if (ball.y - ball.raduis <= pad.y_top && ball.x + ball.raduis >= pad.x_Left && ball.x <= pad.x_Right - 4.0) {
 
 		gravity = false;
-		
+
 
 		direction = "left";
 	}
 	/// right part
 	else if (ball.y - ball.raduis <= pad.y_top && ball.x >= pad.x_Left + 4.0 && ball.x - ball.raduis <= pad.x_Right) {
 		gravity = false;
-				
+
 		direction = "right";
 
 	}
@@ -375,42 +377,43 @@ void detectCollisionWithJumpingPad() {
 }
 void detectCollisionWithBlocks() {
 	int bot = startPoint;
-	for (int row = 0; row < numOfRows; row++) {
+
+	for (size_t row = 0; row < Rows.size(); row++) {
 		bot = bot + height;
-		for (int block = 0; block < numOfBlocks; block++) {
+		for (size_t block = 0; block < Rows[row][0].size(); block++) {
 
 
 			// the ball hits the block form the bottom.
-	    if (ball.x - ball.raduis >= Rows[row][1][block]-extra && ball.x + ball.raduis <= Rows[row][0][block]+extra) {
-			if (ball.y + ball.raduis >= bot && ball.y < bot+0.2 && !gravity) {
-				gravity = true;
-				removeElementFromArray(row, block);
+			if (ball.x - ball.raduis >= Rows[row][1][block] - extra && ball.x + ball.raduis <= Rows[row][0][block] + extra) {
+				if (ball.y + ball.raduis >= bot && ball.y < bot + 0.2 && !gravity) {
+					gravity = true;
+					removeElementFromArray(row, block);
+
+				}
+				// the ball hits the block from the top.
+				else if (ball.y - ball.raduis <= bot + blockHeight && ball.y > (bot + blockHeight) - 0.2 && gravity) {
+					gravity = false;
+					removeElementFromArray(row, block);
+
+				}
 
 			}
-			// the ball hits the block from the top.
-			else if (ball.y - ball.raduis <= bot + blockHeight && ball.y>(bot+ blockHeight)-0.2 && gravity  ) {
-				gravity = false;
-				removeElementFromArray(row, block);
-
-			}
-			 
-		}
 
 		}
 	}
 
 }
-void removeElementFromArray(int row ,int block) {
+void removeElementFromArray(int row, int block) {
 	//set the element to 100 and ignore it in display funciton.
 	Rows[row][0][block] = 100;
 	Rows[row][1][block] = 100;
-	
+
 
 }
 
 void keyboard(int key, int x, int y) {
 
-	
+
 	//left
 	if (key == 100) {
 		// move to the left if half of jumping pad untill half the pad is out of the screen.
@@ -420,26 +423,26 @@ void keyboard(int key, int x, int y) {
 			pad.x_Right = pad.x_Right - 1.0;
 
 		}
-		
+
 
 	}
 	//up
 	else if (key == 101) {
 		if (speed.x < maxBallSpeedX) {
-		
-				speed.x = speed.x + (speed.x) * 0.05;
+
+			speed.x = speed.x + (speed.x) * 0.05;
 
 		}
-		if(speed.y < maxBallSpeedY) {
-				speed.y = speed.y + (speed.y) * 0.05;
-			
+		if (speed.y < maxBallSpeedY) {
+			speed.y = speed.y + (speed.y) * 0.05;
+
 
 		}
 	}
 	//right
 	else if (key == 102) {
 		// move to the right if half of jumping pad untill half the pad is out of the screen.
-		if (pad.x_Left < screen.screenRight-(pad.x_Right- pad.x_Left)/2) {
+		if (pad.x_Left < screen.screenRight - (pad.x_Right - pad.x_Left) / 2) {
 			pad.x_Left = pad.x_Left + 1.0;
 			pad.x_Right = pad.x_Right + 1.0;
 		}
@@ -449,13 +452,13 @@ void keyboard(int key, int x, int y) {
 		float tmpSpeedX = speed.x - (speed.x) * 0.05;
 		float tmpSpeedY = speed.y - (speed.y) * 0.05;
 		cout << tmpSpeedX << "  " << minSpeedX << endl;
-		if (tmpSpeedX > minSpeedX){
-		
+		if (tmpSpeedX > minSpeedX) {
+
 			speed.x = tmpSpeedX;
 
 		}
-		if(tmpSpeedY > minSpeedY) {
-	
+		if (tmpSpeedY > minSpeedY) {
+
 			speed.y = tmpSpeedY;
 
 		}
