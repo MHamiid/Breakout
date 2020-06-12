@@ -51,36 +51,18 @@ struct Speed {
 
 
 //Blocks
-int startPoint = -6, height = 3;
-float extra = 0.5;
-float blockHeight = 1;
-vector<vector<vector<float>>> Rows = {
-{	{ -9, -5, -1, 3 ,7,11 } ,
-	{ -12, -8,-4,0,4,8 }
 
-},
-
-{
-	{ -9.5, -5 - 0.5, -1 - 0.5, 2.5, 6.5,10.5 },
-	{ -11.5, -7.5, -3.5, 0.5, 4.5, 8.5 }
-
-},
-
-
-{
-
-	{ -9, -5, -1, 3, 7, 11 },
-	{ -12, -8, -4, 0, 4, 8 }
-
-},
-{
-	{ -9.5, -5 - 0.5, -1 - 0.5, 2.5, 6.5,10.5 },
-
-	{ -11.5, -7.5, -3.5, 0.5, 4.5, 8.5 }
-
-}
+struct Blocks {
+	vector<vector<vector<float>>> Rows;
+	float startRowPosition;
+	float rawsPaddingDistance;
+	float blockHeight;
 
 };
+//int startPoint = -6, height = 3;
+float extra = 0.5;
+//float blockHeight = 1;
+
 
 
 
@@ -90,6 +72,7 @@ Ball ball;
 Pad pad;
 Screen screen;
 Speed speed;
+Blocks blocks;
 bool gravity = true;
 bool won = false;
 bool lost = false;
@@ -110,7 +93,7 @@ void timer(int);
 void detectCollisionWithBlocks();
 void detectCollisionWithJumpingPad();
 void detectCollisionWithScreen();
-void removeElementFromArray(int row, int block);
+void removeElementFromVector(size_t row, size_t block);
 void keyboard(int, int, int);
 int main(int argc, char** argv)
 {
@@ -152,6 +135,38 @@ void initGame() {
 	//Speed
 	speed.x = minSpeedX;
 	speed.y = minSpeedY;
+
+	//Blocks
+	blocks.startRowPosition = -6;
+	blocks.rawsPaddingDistance = 3;
+	blocks.blockHeight = 1;
+	blocks.Rows = {
+{	{ -9, -5, -1, 3 ,7,11 } ,
+	{ -12, -8,-4,0,4,8 }
+
+},
+
+{
+	{ -9.5, -5 - 0.5, -1 - 0.5, 2.5, 6.5,10.5 },
+	{ -11.5, -7.5, -3.5, 0.5, 4.5, 8.5 }
+
+},
+
+
+{
+
+	{ -9, -5, -1, 3, 7, 11 },
+	{ -12, -8, -4, 0, 4, 8 }
+
+},
+{
+	{ -9.5, -5 - 0.5, -1 - 0.5, 2.5, 6.5,10.5 },
+
+	{ -11.5, -7.5, -3.5, 0.5, 4.5, 8.5 }
+
+}
+
+	};
 
 
 	//Game Settings
@@ -234,29 +249,29 @@ void drawJumpingPad() {
 
 }
 void drawRows() {
-	int bot = startPoint;
+	int bot = blocks.startRowPosition;
 
-	for (size_t row = 0; row < Rows.size(); row++) {
-		bot = bot + height;
-		for (size_t block = 0; block < Rows[row][0].size(); block++) {
+	for (size_t row = 0; row < blocks.Rows.size(); row++) {
+		bot = bot + blocks.rawsPaddingDistance;
+		for (size_t block = 0; block < blocks.Rows[row][0].size(); block++) {
 
 
 
-			if (Rows[row][0][block] != 100) {
+			if (blocks.Rows[row][0][block] != 100) {
 				glBegin(GL_POLYGON);
 
 
-				glVertex2f(Rows[row][1][block] + extra, bot);
-				glVertex2f(Rows[row][0][block] - extra, bot);
+				glVertex2f(blocks.Rows[row][1][block] + extra, bot);
+				glVertex2f(blocks.Rows[row][0][block] - extra, bot);
 
-				glVertex2f(Rows[row][0][block], bot + extra);
+				glVertex2f(blocks.Rows[row][0][block], bot + extra);
 
-				glVertex2f(Rows[row][0][block] - extra, bot + blockHeight);
-				glVertex2f(Rows[row][1][block] + extra, bot + blockHeight);
+				glVertex2f(blocks.Rows[row][0][block] - extra, bot + blocks.blockHeight);
+				glVertex2f(blocks.Rows[row][1][block] + extra, bot + blocks.blockHeight);
 
-				glVertex2f(Rows[row][1][block], bot + extra);
+				glVertex2f(blocks.Rows[row][1][block], bot + extra);
 
-				glVertex2f(Rows[row][1][block] + extra, bot);
+				glVertex2f(blocks.Rows[row][1][block] + extra, bot);
 
 				glEnd();
 
@@ -376,24 +391,24 @@ void detectCollisionWithJumpingPad() {
 
 }
 void detectCollisionWithBlocks() {
-	int bot = startPoint;
+	int bot = blocks.startRowPosition;
 
-	for (size_t row = 0; row < Rows.size(); row++) {
-		bot = bot + height;
-		for (size_t block = 0; block < Rows[row][0].size(); block++) {
+	for (size_t row = 0; row < blocks.Rows.size(); row++) {
+		bot = bot + blocks.rawsPaddingDistance;
+		for (size_t block = 0; block < blocks.Rows[row][0].size(); block++) {
 
 
 			// the ball hits the block form the bottom.
-			if (ball.x - ball.raduis >= Rows[row][1][block] - extra && ball.x + ball.raduis <= Rows[row][0][block] + extra) {
+			if (ball.x - ball.raduis >= blocks.Rows[row][1][block] - extra && ball.x + ball.raduis <= blocks.Rows[row][0][block] + extra) {
 				if (ball.y + ball.raduis >= bot && ball.y < bot + 0.2 && !gravity) {
 					gravity = true;
-					removeElementFromArray(row, block);
+					removeElementFromVector(row, block);
 
 				}
 				// the ball hits the block from the top.
-				else if (ball.y - ball.raduis <= bot + blockHeight && ball.y > (bot + blockHeight) - 0.2 && gravity) {
+				else if (ball.y - ball.raduis <= bot + blocks.blockHeight && ball.y > (bot + blocks.blockHeight) - 0.2 && gravity) {
 					gravity = false;
-					removeElementFromArray(row, block);
+					removeElementFromVector(row, block);
 
 				}
 
@@ -403,10 +418,14 @@ void detectCollisionWithBlocks() {
 	}
 
 }
-void removeElementFromArray(int row, int block) {
-	//set the element to 100 and ignore it in display funciton.
-	Rows[row][0][block] = 100;
-	Rows[row][1][block] = 100;
+void removeElementFromVector(size_t row, size_t block) {
+	//remove the specified element from the vector.
+
+	blocks.Rows[row][0].erase(blocks.Rows[row][0].begin() +block );
+	blocks.Rows[row][1].erase(blocks.Rows[row][1].begin() + block );
+
+	//cout << "Row : " << row << " has now " << blocks.Rows[row][0].size() << " Blocks." << endl;
+	
 
 
 }
