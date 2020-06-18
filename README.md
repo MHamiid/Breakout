@@ -9,4 +9,4 @@ Simple Breakout game made with OpenGl
 - DownArrow : Decrese Speed
 - RightArrow : Move Pad To The Right
 - LeftArrow : Move Pad To The Left
-- Mouse Right Click: Start/Pause The Game
+- Mouse Left Click: Start/Pause The Game
