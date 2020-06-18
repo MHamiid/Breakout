@@ -12,7 +12,8 @@ F3 : Exit
 UpArrow : Increase Speed
 DownArrow : Decrese Speed
 RightArrow : Move Pad To The Right
-LeftArrow : Move Pad To The Left*/
+LeftArrow : Move Pad To The Left
+Mouse Right Click: Start/Pause The Game*/
 
 //Ball
 struct Ball {
@@ -75,11 +76,13 @@ Blocks blocks;
 bool gravity = true;
 bool won = false;
 bool lost = false;
+bool pause = true;
 string direction;
 float maxBallSpeedX = 0.076;
 float maxBallSpeedY = 1.0;
 float minSpeedX = 0.03;
 float minSpeedY = 0.15;
+string onScreenText = "";
 
 void initGame();
 void display();
@@ -97,6 +100,9 @@ vector<vector<int>> initRemovedBlocksVector(int numOfRows);
 bool isBlockRemoved(vector<int> RemovedBlocks, int block);
 void keyboard(int, int, int);
 void mouseMotion(int x, int y);
+void mouseClick(int, int ,int, int);
+void drawText(float x, float y, float r, float g, float b, void* font, char* string);
+void checkGameStatus();
 int main(int argc, char** argv)
 {
 
@@ -114,6 +120,7 @@ int main(int argc, char** argv)
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutSpecialFunc(keyboard);
+	glutMouseFunc(mouseClick);
 	glutPassiveMotionFunc(mouseMotion);
 	glutTimerFunc(0, timer, 0);
 	initGame();
@@ -179,8 +186,11 @@ void initGame() {
 
 	//Game Settings
 	gravity = true;
+	won = false;
 	lost = false;
+	pause = true;
 	direction = "";
+	onScreenText = "Right Click To Start";
 
 }
 vector<vector<int>> initRemovedBlocksVector(int numOfRows) {
@@ -238,7 +248,6 @@ void setBallScreenBoundary() {
 	ball.ballMinY = screen.screenBot + ball.raduis;
 	ball.ballMaxY = screen.screenTop - ball.raduis;
 }
-
 void drawBall() {
 	glBegin(GL_TRIANGLE_FAN);
 	glVertex2f(ball.x, ball.y);
@@ -268,7 +277,7 @@ void drawJumpingPad() {
 }
 void drawRows() {
 	float bot = blocks.startRowPosition;
-
+	int drawnBlocksCounter = 0;
 	for (size_t row = 0; row < blocks.Rows.size(); row++) {
 		bot = bot + blocks.rawsPaddingDistance;
 		float blockStartPosition = blocks.Rows[row][0];
@@ -278,7 +287,7 @@ void drawRows() {
 				if (!isBlockRemoved(blocks.RemovedBlocks[row],block)) {
 
 					/* RemovedBlocks doesn't contains the block*/
-
+					drawnBlocksCounter += 1;
 
 					glBegin(GL_POLYGON);
 					glVertex2f(blockStartPosition, bot);
@@ -295,12 +304,35 @@ void drawRows() {
 		}
 		
 	}
+	//no blocks drawn on screen.
+	if (drawnBlocksCounter == 0) {
+		won = true;
+	 
+	}
 
+}
+void drawText(float x, float y, float r, float g, float b, void *font, char* string)
+{
+	/*FONTS:
+	GLUT_BITMAP_8_BY_13
+	GLUT_BITMAP_9_BY_15
+	GLUT_BITMAP_TIMES_ROMAN_10
+	GLUT_BITMAP_TIMES_ROMAN_24
+	GLUT_BITMAP_HELVETICA_10
+	GLUT_BITMAP_HELVETICA_12
+	GLUT_BITMAP_HELVETICA_18*/
+
+	glColor3f(r, g, b);
+	glRasterPos2f(x, y);
+	int len, i;
+	len = (int)strlen(string);
+	for (i = 0; i < len; i++) {
+		glutBitmapCharacter(font, string[i]);
+	}
 }
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	//glLoadIdentity();
-
 
 
 	//Drawing the ball using ballx and bally as center points.
@@ -309,15 +341,15 @@ void display() {
 
 	//Drawing Blocks.
 	glColor3f(1.0, 0.5, 0.31);
-
 	drawRows();
 
 	//Drawing the jumping pad.
 	glColor3f(1.0, 0.65, 0.52);
-
 	drawJumpingPad();
 
-
+	//Drawing text on screen.
+	const char* cstr = onScreenText.c_str();
+	drawText(-12, 9.5, 1, 1, 1, GLUT_BITMAP_8_BY_13, (char*)cstr);
 
 	glutSwapBuffers();
 }
@@ -328,29 +360,30 @@ void setBackGround(float red, float green, float blue) {
 void timer(int v) {
 	glutPostRedisplay();
 	glutTimerFunc(1, timer, 0);
-	detectCollisionWithJumpingPad();
-	detectCollisionWithScreen();
-	detectCollisionWithBlocks();
-	if (gravity) {
-		ball.y = ball.y - speed.y;
+	if (!pause) {
+		checkGameStatus();
+		detectCollisionWithJumpingPad();
+		detectCollisionWithScreen();
+		detectCollisionWithBlocks();
+		if (gravity) {
+			ball.y = ball.y - speed.y;
 
+		}
+		else {
+			ball.y = ball.y + speed.y;
+
+		}
+		if (direction == "right") {
+			ball.x = ball.x + speed.x;
+		}
+		else if (direction == "left") {
+
+			ball.x = ball.x - speed.x;
+
+		}
 	}
-	else {
-		ball.y = ball.y + speed.y;
-
-	}
-	if (direction == "right") {
-		ball.x = ball.x + speed.x;
-	}
-	else if (direction == "left") {
-
-		ball.x = ball.x - speed.x;
-
-	}
-
 
 }
-
 void detectCollisionWithScreen() {
 
 	if (ball.x > ball.ballMaxX) {
@@ -382,7 +415,7 @@ void detectCollisionWithJumpingPad() {
 	// if the ball passed the top of the jumping pad.
 	if (ball.y - ball.raduis <= pad.y_top -speed.y) {
 
-		lost = true;
+		//lost = true;
 
 	}
 	else if (ball.y - ball.raduis <= pad.y_top && ball.x + ball.raduis >= pad.x_Left && ball.x <= pad.x_Right - 4.0 && direction!="left") {
@@ -457,7 +490,6 @@ bool isBlockRemoved(vector<int> RemovedBlocks, int block) {
 
 
 }
-
 void keyboard(int key, int x, int y) {
 
 
@@ -542,6 +574,29 @@ void mouseMotion(int x, int y) {
 	   //update pad position to mouse position.
 	   pad.x_Left = xWorldCoordinate - pad.middlePoint;
 	   pad.x_Right = xWorldCoordinate + pad.middlePoint;
+	}
+	
+}
+void mouseClick(int button ,int state,int x, int y) {
+	//Unpause the game.
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		if (pause) {
+			pause = false;
+			onScreenText = "";
+		}
+		else {
+			pause = true;
+			onScreenText = "Right Click To Start";
+		}
+		
+	}
+}
+void checkGameStatus() {
+	
+	if (lost||won) {
+
+		onScreenText = "[F1] To Retry";
+		pause = true;
 	}
 	
 }
