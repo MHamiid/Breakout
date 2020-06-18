@@ -31,7 +31,7 @@ struct Pad {
 	float x_Left;
 	float y_top;
 	float y_bot;
-
+	float middlePoint;
 
 };
 
@@ -40,6 +40,7 @@ struct Screen {
 
 	float screenTop, screenBot, screenLeft, screenRight;
 	float ratio;
+	float widthInPixels, heightInPixels;
 };
 
 //Speed
@@ -76,9 +77,9 @@ bool won = false;
 bool lost = false;
 string direction;
 float maxBallSpeedX = 0.076;
-float maxBallSpeedY = 0.38;
-float minSpeedX = 0.003;
-float minSpeedY = 0.015;
+float maxBallSpeedY = 1.0;
+float minSpeedX = 0.03;
+float minSpeedY = 0.15;
 
 void initGame();
 void display();
@@ -95,6 +96,7 @@ void removeBlockFromVector(size_t row, size_t blockNum);
 vector<vector<int>> initRemovedBlocksVector(int numOfRows);
 bool isBlockRemoved(vector<int> RemovedBlocks, int block);
 void keyboard(int, int, int);
+void mouseMotion(int x, int y);
 int main(int argc, char** argv)
 {
 
@@ -112,6 +114,7 @@ int main(int argc, char** argv)
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutSpecialFunc(keyboard);
+	glutPassiveMotionFunc(mouseMotion);
 	glutTimerFunc(0, timer, 0);
 	initGame();
 
@@ -122,13 +125,14 @@ int main(int argc, char** argv)
 void initGame() {
 	//Ball
 	ball.x = 0;
-	ball.y = -4.0;
+	ball.y = -6.0;
 	ball.segments = 50;
 	ball.raduis = 0.5;
 
 	//Pad
 	pad.x_Right = 3.0;
 	pad.x_Left = -3.0;
+	pad.middlePoint = (pad.x_Right - pad.x_Left) / 2;
 	pad.y_top = -7.5;
 	pad.y_bot = -8.0;
 
@@ -137,9 +141,9 @@ void initGame() {
 	speed.y = minSpeedY;
 
 	//Blocks
-	blocks.startRowPosition = -6.0;
-	blocks.rawsPaddingDistance = 3.0;
-	blocks.columnPaddingDistance = 0.2;
+	blocks.startRowPosition = -7.0 ;
+	blocks.rawsPaddingDistance = 2.5;
+	blocks.columnPaddingDistance = 0.1;
 	blocks.blockHeight = 0.5;
 	
 
@@ -159,6 +163,14 @@ void initGame() {
 },
 {
 	{ -11, 2 , 10 },
+}
+,
+{
+	{ -11, 2, 10 }
+}
+,
+{
+	{ -11, 2, 10 }
 }
 
 	};
@@ -184,6 +196,9 @@ void reshape(int w, int h) {
 
 	screen.ratio = (float)w / h;
 
+
+	screen.widthInPixels = w;
+	screen.heightInPixels = h;
 
 	glViewport(0, 0, w, h);
 
@@ -266,10 +281,8 @@ void drawRows() {
 
 
 					glBegin(GL_POLYGON);
-
 					glVertex2f(blockStartPosition, bot);
 					glVertex2f(blockStartPosition + blockWidth, bot);
-
 					glVertex2f(blockStartPosition + blockWidth, bot + blocks.blockHeight);
 					glVertex2f(blockStartPosition, bot + blocks.blockHeight);
 
@@ -286,21 +299,22 @@ void drawRows() {
 }
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT);
-	glLoadIdentity();
+	//glLoadIdentity();
 
 
 
-	// Drawing the ball using ballx and bally as center points.
-
-	glColor3f(1, 0.7, 0.7);
+	//Drawing the ball using ballx and bally as center points.
+	glColor3f(1.0, 0.7, 0.7);
 	drawBall();
 
-	// Drawing Blocks.
-	glColor3f(0.9, 0.9, 0.5);
+	//Drawing Blocks.
+	glColor3f(1.0, 0.5, 0.31);
+
 	drawRows();
 
-	// Drawing the jumping pad.
-	glColor3f(0.5, 0.6, 0.4);
+	//Drawing the jumping pad.
+	glColor3f(1.0, 0.65, 0.52);
+
 	drawJumpingPad();
 
 
@@ -366,12 +380,12 @@ void detectCollisionWithJumpingPad() {
 
 
 	// if the ball passed the top of the jumping pad.
-	if (ball.y - ball.raduis <= pad.y_top - 0.3) {
+	if (ball.y - ball.raduis <= pad.y_top -speed.y) {
 
 		lost = true;
 
 	}
-	else if (ball.y - ball.raduis <= pad.y_top && ball.x + ball.raduis >= pad.x_Left && ball.x <= pad.x_Right - 4.0) {
+	else if (ball.y - ball.raduis <= pad.y_top && ball.x + ball.raduis >= pad.x_Left && ball.x <= pad.x_Right - 4.0 && direction!="left") {
 
 		gravity = false;
 
@@ -379,7 +393,7 @@ void detectCollisionWithJumpingPad() {
 		direction = "left";
 	}
 	/// right part
-	else if (ball.y - ball.raduis <= pad.y_top && ball.x >= pad.x_Left + 4.0 && ball.x - ball.raduis <= pad.x_Right) {
+	else if (ball.y - ball.raduis <= pad.y_top && ball.x >= pad.x_Left + 4.0 && ball.x - ball.raduis <= pad.x_Right && direction!="right") {
 		gravity = false;
 
 		direction = "right";
@@ -406,13 +420,13 @@ void detectCollisionWithBlocks() {
 
 			if (!isBlockRemoved(blocks.RemovedBlocks[row], block) &&ball.x + ball.raduis >= blockStartPosition  && ball.x - ball.raduis <= blockStartPosition+blockWidth ) {
 				// the ball hits the block form the bottom.
-				if (ball.y + ball.raduis >= bot && ball.y < bot  && !gravity) {
+				if (ball.y + ball.raduis >= bot && ball.y < bot +speed.y  && !gravity) {
 					gravity = true;
 					removeBlockFromVector(row, block);
 
 				}
 				// the ball hits the block from the top.
-				else if (ball.y - ball.raduis <= bot + blocks.blockHeight && ball.y > (bot + blocks.blockHeight) && gravity) {
+				else if (ball.y - ball.raduis <= bot + blocks.blockHeight && ball.y > (bot + blocks.blockHeight) - speed.y && gravity) {
 					gravity = false;
 					removeBlockFromVector(row, block);
 
@@ -482,17 +496,16 @@ void keyboard(int key, int x, int y) {
 	}
 	//down
 	else if (key == 103) {
-		float tmpSpeedX = speed.x - (speed.x) * 0.05;
-		float tmpSpeedY = speed.y - (speed.y) * 0.05;
-		cout << tmpSpeedX << "  " << minSpeedX << endl;
-		if (tmpSpeedX > minSpeedX) {
+		
+		
+		if (speed.x > minSpeedX) {
 
-			speed.x = tmpSpeedX;
+			speed.x = speed.x - (speed.x) * 0.05;
 
 		}
-		if (tmpSpeedY > minSpeedY) {
+		if (speed.y > minSpeedY) {
 
-			speed.y = tmpSpeedY;
+			speed.y = speed.y - (speed.y) * 0.05;
 
 		}
 
@@ -517,4 +530,18 @@ void keyboard(int key, int x, int y) {
 
 
 
+}
+void mouseMotion(int x, int y) {
+
+
+	if (x != 0) {
+	   //get x game position respect to x pixel position.
+	   float xPositionRatio = screen.widthInPixels / x;
+	   float xWorldCoordinate = ((screen.screenRight - screen.screenLeft) / xPositionRatio) - screen.screenRight;
+
+	   //update pad position to mouse position.
+	   pad.x_Left = xWorldCoordinate - pad.middlePoint;
+	   pad.x_Right = xWorldCoordinate + pad.middlePoint;
+	}
+	
 }
