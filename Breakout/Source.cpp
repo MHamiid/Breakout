@@ -13,7 +13,7 @@ UpArrow : Increase Speed
 DownArrow : Decrese Speed
 RightArrow : Move Pad To The Right
 LeftArrow : Move Pad To The Left
-Mouse Right Click: Start/Pause The Game*/
+Mouse Left Click: Start/Pause The Game*/
 
 //Ball
 struct Ball {
@@ -77,11 +77,12 @@ bool gravity = true;
 bool won = false;
 bool lost = false;
 bool pause = true;
+bool fullScreenMode = false;
 string direction;
 float maxBallSpeedX = 0.076;
 float maxBallSpeedY = 1.0;
-float minSpeedX = 0.03;
-float minSpeedY = 0.15;
+float minSpeedX = 0.02;
+float minSpeedY = 0.08;
 string onScreenText = "";
 
 void initGame();
@@ -551,8 +552,15 @@ void keyboard(int key, int x, int y) {
 	}
 	//F2 Fullscreen.
 	else if (key == 2) {
-
-		glutFullScreen();
+		fullScreenMode = !fullScreenMode;
+		if (fullScreenMode) {
+			glutFullScreen();
+		}
+		else {
+			glutReshapeWindow(800, 640);
+			glutPositionWindow(GetSystemMetrics(SM_CXSCREEN) / 6,
+				GetSystemMetrics(SM_CYSCREEN) / 6);
+		}
 	}
 
 	//F3 Exit game.
